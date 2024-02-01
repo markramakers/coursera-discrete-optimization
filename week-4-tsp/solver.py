@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 
-from .data_models import Point, length
-
+from points import Point, length
+from initial_solutions import create_initial_solution
 
 def solve_it(input_data):
     # Modify this code to run your optimization algorithm
@@ -17,21 +17,27 @@ def solve_it(input_data):
     for i in range(1, nodeCount + 1):
         line = lines[i]
         parts = line.split()
-        points.append(Point(float(parts[0]), float(parts[1])))
+        points.append(Point(float(parts[0]), float(parts[1]), i-1))
 
     # build a trivial solution
+    
     # visit the nodes in the order they appear in the file
-    solution = range(0, nodeCount)
+    #solution = range(0, nodeCount)
+
+    # Create an inital solution based on an MST
+    solution = create_initial_solution(points)
 
     # calculate the length of the tour
-    obj = length(points[solution[-1]], points[solution[0]])
+    obj = length(solution[-1], solution[0])
     for index in range(0, nodeCount - 1):
-        obj += length(points[solution[index]], points[solution[index + 1]])
+        obj += length(solution[index], solution[index + 1])
 
     # prepare the solution in the specified output format
     output_data = '%.2f' % obj + ' ' + str(0) + '\n'
-    output_data += ' '.join(map(str, solution))
+    output_data += ' '.join([str(point.index) for point in solution])
 
+    # print(nodeCount)
+    # print(solution)
     return output_data
 
 

@@ -1,6 +1,9 @@
 networkx
 numpy
 scipy
-sklearn
+scikit-learn
 pytest
 matplotlib
+solara
+plotly
+pandas

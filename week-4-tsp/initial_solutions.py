@@ -1,4 +1,4 @@
-from points import Point
+from points import Point, length
 
 from typing import List, Dict
 import networkx as nx
@@ -40,7 +40,7 @@ def create_initial_graph(points_list: List[Point], point_for_node: Dict[int, Poi
     graph = nx.Graph()
     for i, point in point_for_node.items():
         neighbours = kdt.query([point.to_list()], k_connected_nodes + 1)
-        print("edge: ", neighbours)
+        #print("edge: ", neighbours)
         import pdb
         # pdb.set_trace()
         edges = [
@@ -53,8 +53,8 @@ def create_initial_graph(points_list: List[Point], point_for_node: Dict[int, Poi
             if point != point_for_node[neighbour_index]]
 
         graph.add_edges_from(edges)
-    print("edges: ", graph.edges)
-    print("nodes: ", graph.nodes)
+    # print("edges: ", graph.edges)
+    # print("nodes: ", graph.nodes)
     return points_list, graph
 
 
@@ -91,14 +91,46 @@ def minimum_spanning_tree_prims(points_list):
         # Update key value of all adjacent vertices of u. To update the key values,
         # iterate through all adjacent vertices. For every adjacent vertex v,
         # if weight of edge u-v is less than the previous key value of v, update the key value as weight of u-v
+@timeit
+def christofides(points_list):
+    
+    G_ex = nx.Graph()
+    G_ex.add_nodes_from(points_list)
+    import itertools
+    for p1, p2 in itertools.combinations(points_list, 2):
+        G_ex.add_edge(p1, p2, weight=length(p1, p2))
+    route = nx.approximation.christofides(G_ex, weight="weight")
+    route = list(dict.fromkeys(route))
 
+    tsp_initial = nx.Graph(list(nx.utils.pairwise(route)))
+    return route, tsp_initial
 
-if __name__ == "__main__":
-    points_list = [Point(0, 1),
-                   Point(1, 0),
-                   Point(2, 2),
-                   Point(2, 0),
-                   Point(1, 1)]
+@timeit
+def create_distance_matrix(route):
+    from scipy.spatial import distance_matrix as dm
+    vectors = [[point.x, point.y] for point in route]
+    distance_matrix = dm(vectors, vectors)
+    return distance_matrix
+
+@timeit
+def two_opt(route, distance_matrix):
+    from two_opt_solver import Solver
+    # distance_matrix = [[length(pointA, pointB) for pointA in route]
+                    #    for pointB in route]
+
+    tsp = Solver(distance_matrix, range(0, len(route)))
+    new_route, new_distance, distances = tsp.two_opt()
+    new_points = [route[i] for i in new_route]
+    return new_points
+
+@timeit
+def preorder_tree(mst):
+    pre_ordered_tree = list(nx.dfs_preorder_nodes(mst))
+    tsp_initial = nx.Graph(list(nx.utils.pairwise(pre_ordered_tree)))
+    return pre_ordered_tree, tsp_initial
+
+@timeit
+def create_initial_solution(points_list):
     point_for_node = {
         i: point
         for i, point in enumerate(points_list)
@@ -109,10 +141,35 @@ if __name__ == "__main__":
     #     for i, point in enumerate(points_list)
     # }
     initial_solution, graph = create_initial_graph(points_list, point_for_node)
-    nx.draw(graph, pos=location_for_point)
-    plt.show()
+    # nx.draw(graph, pos=location_for_point)
+    # plt.show(block=False)
 
     mst = create_mst(graph)
-    nx.draw(mst, pos=location_for_point)
-    plt.show()
+    # nx.draw(mst, pos=location_for_point)
+    # plt.show(block=False)
 
+
+    route, tsp_initial = preorder_tree(mst)
+
+    if len(points_list) < 2000:
+        route, tsp_initial = christofides(points_list)
+
+    distance_matrix = create_distance_matrix(route)
+    new_points = two_opt(route, distance_matrix)
+    # print(new_points)
+
+
+
+    # nx.draw(nx.Graph(list(nx.utils.pairwise(new_points))), pos=location_for_point)
+    # plt.show(block=False)
+    return new_points
+
+if __name__ == "__main__":
+    points_list = [Point(0, 1),
+                   Point(1, 0),
+                   Point(2, 2),
+                   Point(2, 0),
+                   Point(1, 1)]
+    create_initial_solution(points_list)
+
+  
